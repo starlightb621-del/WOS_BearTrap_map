@@ -1,0 +1,756 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  LayoutGrid, 
+  Download, 
+  Edit2, 
+  Check, 
+  X, 
+  RefreshCw, 
+  Search, 
+  UserPlus, 
+  Trash2, 
+  Info
+} from 'lucide-react';
+
+// image_9fe0f6.png의 실제 전체 명단 완벽 반영
+const defaultMembers = [
+  // 곰1 연맹원 (19명)
+  { id: 'm1', name: '9pro', team: '곰1', initialTeam: '곰1' },
+  { id: 'm2', name: '미도리', team: '곰1', initialTeam: '곰1' },
+  { id: 'm3', name: '형아곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm4', name: '판다곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm5', name: '두목곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm6', name: '반달곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm7', name: '피아노맨', team: '곰1', initialTeam: '곰1' },
+  { id: 'm8', name: 'nanino', team: '곰1', initialTeam: '곰1' },
+  { id: 'm9', name: '순한곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm10', name: 'gwangbok', team: '곰1', initialTeam: '곰1' },
+  { id: 'm11', name: 'Bebe (곰왕아님)', team: '곰1', initialTeam: '곰1' },
+  { id: 'm12', name: '대오가', team: '곰1', initialTeam: '곰1' },
+  { id: 'm13', name: '미술랭곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm14', name: '모곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm15', name: 'SIMBA', team: '곰1', initialTeam: '곰1' },
+  { id: 'm16', name: '다니엘', team: '곰1', initialTeam: '곰1' },
+  { id: 'm17', name: '언니곰', team: '곰1', initialTeam: '곰1' },
+  { id: 'm18', name: '버거킹알바생', team: '곰1', initialTeam: '곰1' },
+  { id: 'm19', name: 'Li myoung bak', team: '곰1', initialTeam: '곰1' },
+
+  // 곰2 연맹원 (19명)
+  { id: 'm20', name: '난데나야', team: '곰2', initialTeam: '곰2' },
+  { id: 'm21', name: '룰루랄라', team: '곰2', initialTeam: '곰2' },
+  { id: 'm22', name: '빛나는여왕', team: '곰2', initialTeam: '곰2' },
+  { id: 'm23', name: '볼~구루미', team: '곰2', initialTeam: '곰2' },
+  { id: 'm24', name: '수양대군 아빠곰', team: '곰2', initialTeam: '곰2' },
+  { id: 'm25', name: '누나곰', team: '곰2', initialTeam: '곰2' },
+  { id: 'm26', name: '그리고', team: '곰2', initialTeam: '곰2' },
+  { id: 'm27', name: 'Ted Chang', team: '곰2', initialTeam: '곰2' },
+  { id: 'm28', name: '나무엄마', team: '곰2', initialTeam: '곰2' },
+  { id: 'm29', name: 'GOLD 24K', team: '곰2', initialTeam: '곰2' },
+  { id: 'm30', name: '가방그지알콜핑', team: '곰2', initialTeam: '곰2' },
+  { id: 'm31', name: '말랑곰', team: '곰2', initialTeam: '곰2' },
+  { id: 'm32', name: '데헷 smile', team: '곰2', initialTeam: '곰2' },
+  { id: 'm33', name: '하츄핑', team: '곰2', initialTeam: '곰2' },
+  { id: 'm34', name: '단군왕검', team: '곰2', initialTeam: '곰2' },
+  { id: 'm35', name: '뿌뿌링', team: '곰2', initialTeam: '곰2' },
+  { id: 'm36', name: '나인이 nine', team: '곰2', initialTeam: '곰2' },
+  { id: 'm37', name: '무거핑', team: '곰2', initialTeam: '곰2' },
+  { id: 'm38', name: 'bUbbleS', team: '곰2', initialTeam: '곰2' }
+];
+
+// 5x5 그리드에서 외곽 테두리 형태만 가지도록 16개의 셀 위치 지정
+const trapGridCells = [
+  // Row 1 (Top)
+  { row: 1, col: 1, type: 'corner', label: '코너 셀' },
+  { row: 1, col: 2, type: 'normal', label: '' },
+  { row: 1, col: 3, type: 'normal', label: '' },
+  { row: 1, col: 4, type: 'normal', label: '' },
+  { row: 1, col: 5, type: 'corner', label: '코너 셀' },
+  
+  // Row 2 (Middle Top)
+  { row: 2, col: 1, type: 'normal', label: '' },
+  { row: 2, col: 5, type: 'normal', label: '' },
+  
+  // Row 3 (Center Height)
+  { row: 3, col: 1, type: 'normal', label: '' },
+  { row: 3, col: 5, type: 'normal', label: '' },
+  
+  // Row 4 (Middle Bottom)
+  { row: 4, col: 1, type: 'normal', label: '' },
+  { row: 4, col: 5, type: 'normal', label: '' },
+  
+  // Row 5 (Bottom)
+  { row: 5, col: 1, type: 'corner', label: '코너 셀' },
+  { row: 5, col: 2, type: 'normal', label: '' },
+  { row: 5, col: 3, type: 'normal', label: '' },
+  { row: 5, col: 4, type: 'normal', label: '' },
+  { row: 5, col: 5, type: 'corner', label: '코너 셀' }
+];
+
+export default function App() {
+  const [members, setMembers] = useState(() => {
+    const saved = localStorage.getItem('trap_members_v2');
+    return saved ? JSON.parse(saved) : defaultMembers;
+  });
+
+  // 배치 기록 상태: { '곰1-row-col': memberObject }
+  const [placement, setPlacement] = useState(() => {
+    const saved = localStorage.getItem('trap_placement_v2');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberTeam, setNewMemberTeam] = useState('곰1');
+  const [activeFilter, setActiveFilter] = useState('전체'); // '전체', '곰1', '곰2', '미배치'
+  
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [html2canvasLoaded, setHtml2canvasLoaded] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaved, setIsAutoSaved] = useState(false);
+
+  const boardRef = useRef(null);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.async = true;
+    script.onload = () => setHtml2canvasLoaded(true);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('trap_members_v2', JSON.stringify(members));
+    localStorage.setItem('trap_placement_v2', JSON.stringify(placement));
+    setIsAutoSaved(true);
+    const timer = setTimeout(() => setIsAutoSaved(false), 2000);
+    return () => clearTimeout(timer);
+  }, [members, placement]);
+
+  // 이미 배치된 연맹원 목록 구하기
+  const placedMemberIds = Object.values(placement).map(m => m.id);
+
+  // 사이드바에서 현재 드래그용 명단 구하기
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    
+    if (activeFilter === '전체') return true;
+    if (activeFilter === '곰1') return member.team === '곰1';
+    if (activeFilter === '곰2') return member.team === '곰2';
+    if (activeFilter === '미배치') return !placedMemberIds.includes(member.id);
+    return true;
+  });
+
+  const handleStartEdit = (m) => {
+    setEditingId(m.id);
+    setEditName(m.name);
+  };
+
+  const handleSaveEdit = (id) => {
+    if (!editName.trim()) return;
+    
+    // 명단 리스트 업데이트
+    const updated = members.map(m => m.id === id ? { ...m, name: editName } : m);
+    setMembers(updated);
+
+    // 이미 배치판에 놓인 경우 해당 카드의 이름도 업데이트
+    const updatedPlacement = { ...placement };
+    Object.keys(updatedPlacement).forEach(key => {
+      if (updatedPlacement[key].id === id) {
+        updatedPlacement[key] = { ...updatedPlacement[key], name: editName };
+      }
+    });
+    setPlacement(updatedPlacement);
+    setEditingId(null);
+  };
+
+  const handleAddMember = (e) => {
+    e.preventDefault();
+    if (!newMemberName.trim()) return;
+    const newMember = {
+      id: 'custom-' + Date.now(),
+      name: newMemberName.trim(),
+      team: newMemberTeam,
+      initialTeam: newMemberTeam
+    };
+    setMembers([...members, newMember]);
+    setNewMemberName('');
+  };
+
+  const handleDeleteMember = (id) => {
+    if (window.confirm('이 연맹원을 명단에서 완전히 삭제하시겠습니까? (배치판에서도 제거됩니다)')) {
+      setMembers(members.filter(m => m.id !== id));
+      
+      // 배치된 곳에서도 삭제
+      const updatedPlacement = { ...placement };
+      Object.keys(updatedPlacement).forEach(key => {
+        if (updatedPlacement[key].id === id) {
+          delete updatedPlacement[key];
+        }
+      });
+      setPlacement(updatedPlacement);
+      if (selectedMember?.id === id) setSelectedMember(null);
+    }
+  };
+
+  const handleDragStart = (e, member, sourceKey = null) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ member, sourceKey }));
+    setSelectedMember(null); 
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); 
+  };
+
+  const handleDrop = (e, targetTrap, targetRow, targetCol) => {
+    e.preventDefault();
+    try {
+      const dataStr = e.dataTransfer.getData('text/plain');
+      if (!dataStr) return;
+      
+      const { member, sourceKey } = JSON.parse(dataStr);
+      const targetKey = `${targetTrap}-${targetRow}-${targetCol}`;
+
+      // 1. 기존 타겟 위치에 있는 인원 정보 보관
+      const previousOccupant = placement[targetKey];
+
+      const nextPlacement = { ...placement };
+
+      // 2. 원래 소스 구역이 배치판 내였다면 기존 위치를 비우거나 스왑
+      if (sourceKey) {
+        if (previousOccupant) {
+          nextPlacement[sourceKey] = previousOccupant;
+        } else {
+          delete nextPlacement[sourceKey];
+        }
+      }
+
+      // 3. 타겟 구역에 신규 인원 안착
+      nextPlacement[targetKey] = member;
+
+      // 4. 배치 상황에 맞춰 연맹 소속 함정 정보 임시 전환
+      const updatedMembers = members.map(m => {
+        if (m.id === member.id) {
+          return { ...m, team: targetTrap }; 
+        }
+        return m;
+      });
+
+      setMembers(updatedMembers);
+      setPlacement(nextPlacement);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSelectMember = (member) => {
+    if (selectedMember?.id === member.id) {
+      setSelectedMember(null); 
+    } else {
+      setSelectedMember(member);
+    }
+  };
+
+  const handleCellClick = (trapId, row, col) => {
+    const targetKey = `${trapId}-${row}-${col}`;
+    
+    if (selectedMember) {
+      const prevKey = Object.keys(placement).find(key => placement[key].id === selectedMember.id);
+      const previousOccupant = placement[targetKey];
+      const nextPlacement = { ...placement };
+
+      if (prevKey) {
+        if (previousOccupant) {
+          nextPlacement[prevKey] = previousOccupant;
+        } else {
+          delete nextPlacement[prevKey];
+        }
+      }
+
+      nextPlacement[targetKey] = selectedMember;
+
+      const updatedMembers = members.map(m => {
+        if (m.id === selectedMember.id) {
+          return { ...m, team: trapId };
+        }
+        return m;
+      });
+
+      setMembers(updatedMembers);
+      setPlacement(nextPlacement);
+      setSelectedMember(null); 
+    } else {
+      if (placement[targetKey]) {
+        handleRemoveFromSlot(targetKey);
+      }
+    }
+  };
+
+  const handleRemoveFromSlot = (key) => {
+    const removedMember = placement[key];
+    const nextPlacement = { ...placement };
+    delete nextPlacement[key];
+    setPlacement(nextPlacement);
+
+    if (removedMember) {
+      setMembers(prev => prev.map(m => 
+        m.id === removedMember.id ? { ...m, team: m.initialTeam } : m
+      ));
+    }
+  };
+
+  const handleResetPlacement = () => {
+    if (window.confirm('모든 연맹원 배치를 초기화하시겠습니까?')) {
+      setPlacement({});
+      setMembers(members.map(m => ({ ...m, team: m.initialTeam })));
+      setSelectedMember(null);
+    }
+  };
+
+  const handleExportImage = async () => {
+    if (!html2canvasLoaded) return;
+    
+    setIsSaving(true);
+    try {
+      const canvas = await window.html2canvas(boardRef.current, {
+        backgroundColor: '#f8fafc',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `곰함정_연맹원_배치도_${new Date().toISOString().slice(0, 10)}.png`;
+      link.click();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none antialiased text-slate-800">
+      
+      {/* 헤더 */}
+      <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-md sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-600 rounded-lg text-white shadow-inner animate-pulse">
+            <LayoutGrid size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-wide">곰함정 연맹원 배치기</h1>
+            <p className="text-xs text-blue-200">Drag & Drop 또는 간편 터치 방식으로 연맹원을 배치해 보세요.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-950/50 border border-blue-800 rounded-full text-xs text-blue-200">
+            <span className={`w-2 h-2 rounded-full ${isAutoSaved ? 'bg-emerald-400' : 'bg-blue-400'}`}></span>
+            {isAutoSaved ? '실시간 자동 저장 중...' : '배치 실시간 저장됨'}
+          </div>
+
+          <button 
+            onClick={handleResetPlacement}
+            className="flex items-center gap-1.5 bg-slate-700/80 hover:bg-slate-700 text-white border border-slate-600 px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95 shadow"
+          >
+            <RefreshCw size={15} />
+            초기화
+          </button>
+
+          <button 
+            onClick={handleExportImage}
+            disabled={isSaving}
+            className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg active:scale-95 ${
+              isSaving 
+                ? 'bg-slate-500 cursor-not-allowed' 
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-400'
+            }`}
+          >
+            <Download size={15} />
+            {isSaving ? '이미지 생성 중...' : '배치도 이미지 저장'}
+          </button>
+        </div>
+      </header>
+
+      {/* 메인 레이아웃 */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] w-full mx-auto">
+        
+        {/* ==================== 왼쪽: 연맹원 명단 사이드바 ==================== */}
+        <aside className="w-full lg:w-80 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col gap-4">
+          
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-md font-bold text-slate-800 flex items-center gap-2">
+                <LayoutGrid size={18} className="text-blue-600" />
+                연맹원 명단 <span className="text-xs font-normal text-slate-400">({members.length}명)</span>
+              </h2>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5 flex items-start gap-2 text-xs text-blue-700 leading-relaxed mb-3">
+              <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
+              <div>
+                <strong className="block font-semibold mb-0.5">💡 배치 및 편집 팁</strong>
+                명단을 드래그하여 배치판에 놓거나, 클릭(터치) 후 빈칸을 터치하면 배치됩니다! 이름 우측 수정 아이콘으로 편집 가능합니다.
+              </div>
+            </div>
+
+            <form onSubmit={handleAddMember} className="flex gap-1">
+              <input 
+                type="text"
+                placeholder="이름 입력 후 추가..."
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                className="flex-1 text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 bg-slate-50 text-slate-800"
+              />
+              <select
+                value={newMemberTeam}
+                onChange={(e) => setNewMemberTeam(e.target.value)}
+                className="text-xs px-1.5 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-500 text-slate-700"
+              >
+                <option value="곰1">곰1</option>
+                <option value="곰2">곰2</option>
+              </select>
+              <button 
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-xl transition-all shadow-sm shrink-0"
+              >
+                <UserPlus size={14} />
+              </button>
+            </form>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* 검색 및 필터 */}
+          <div className="space-y-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-3 text-slate-400" />
+              <input 
+                type="text"
+                placeholder="연맹원 이름 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full text-xs pl-8 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 bg-slate-50 text-slate-800"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 gap-1 p-0.5 bg-slate-100 rounded-xl">
+              {['전체', '곰1', '곰2', '미배치'].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter)}
+                  className={`py-1 text-[11px] font-semibold rounded-lg transition-all ${
+                    activeFilter === filter 
+                      ? 'bg-white text-blue-700 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 스크롤 명단 리스트 */}
+          <div className="flex-1 overflow-y-auto max-h-[500px] lg:max-h-[calc(100vh-320px)] space-y-1.5 pr-1">
+            {filteredMembers.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-400">
+                조건에 맞는 연맹원이 없습니다.
+              </div>
+            ) : (
+              filteredMembers.map((member) => {
+                const isPlaced = placedMemberIds.includes(member.id);
+                const isSelected = selectedMember?.id === member.id;
+                
+                return (
+                  <div 
+                    key={member.id}
+                    draggable={!isPlaced}
+                    onDragStart={(e) => handleDragStart(e, member)}
+                    className={`group relative flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                      isPlaced 
+                        ? 'bg-slate-50 border-slate-200 opacity-40 cursor-not-allowed select-none' 
+                        : isSelected
+                        ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-400/20 cursor-pointer shadow-md'
+                        : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-grab active:cursor-grabbing'
+                    }`}
+                    onClick={() => !isPlaced && handleSelectMember(member)}
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden w-full">
+                      <div className={`w-1.5 h-8 rounded-full shrink-0 ${
+                        member.team === '곰1' ? 'bg-sky-400' : 'bg-emerald-400'
+                      }`} />
+                      
+                      {editingId === member.id ? (
+                        <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            className="w-full text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-slate-800"
+                            value={editName} 
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(member.id)}
+                            autoFocus
+                          />
+                          <button 
+                            onClick={() => handleSaveEdit(member.id)} 
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button 
+                            onClick={() => setEditingId(null)} 
+                            className="p-1 text-rose-500 hover:bg-rose-50 rounded"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between w-full overflow-hidden">
+                          <span className="text-xs font-bold text-slate-700 truncate">{member.name}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ml-1 ${
+                            member.team === '곰1' 
+                              ? 'bg-sky-50 text-sky-600 border border-sky-100' 
+                              : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                          }`}>
+                            {member.team}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {!isPlaced && editingId !== member.id && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white pl-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleStartEdit(member); }}
+                          className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteMember(member.id); }}
+                          className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-slate-100"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          
+          {selectedMember && (
+            <div className="bg-blue-600 text-white rounded-xl p-3 shadow-md animate-bounce flex items-center justify-between text-xs font-semibold">
+              <span className="truncate">🎯 {selectedMember.name} 선택됨! 배치할 칸을 터치하세요.</span>
+              <button onClick={() => setSelectedMember(null)} className="hover:bg-blue-700 p-0.5 rounded">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </aside>
+
+        {/* ==================== 오른쪽: 메인 배치 보드 구역 ==================== */}
+        <main className="flex-1 flex flex-col gap-4">
+          
+          <div className="bg-slate-100 border border-slate-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="text-xs text-slate-600 flex flex-col gap-1">
+              <span className="font-bold text-slate-700 text-sm">📢 배치 현황판 요약</span>
+              <span>• 전체 인원 중 <strong className="text-blue-600">{placedMemberIds.length}명</strong>이 배치 완료되었습니다.</span>
+              <span>• 코너 요충지에 자리한 연맹원은 더 크게 로열 인디고 색상으로 강조 표시됩니다.</span>
+            </div>
+            
+            <div className="flex gap-3 text-xs shrink-0 bg-white p-3 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 bg-indigo-50 border-[2.5px] border-indigo-600 rounded scale-105"></div>
+                <span className="font-semibold text-slate-600">배치된 코너 셀</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3.5 h-3.5 bg-blue-50 border-[2px] border-blue-600 rounded"></div>
+                <span className="font-semibold text-slate-600">배치된 드롭 존</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 배치 도표 */}
+          <div 
+            ref={boardRef} 
+            className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-md flex flex-col items-center justify-center gap-10 overflow-x-auto min-h-[580px]"
+          >
+            <div className="text-center w-full">
+              <h2 className="text-2xl font-black text-slate-800 tracking-wide">🏆 곰함정 연맹원 전술 자리 배치도</h2>
+              <p className="text-xs text-slate-400 mt-1">최종 갱신일: {new Date().toLocaleDateString()}</p>
+            </div>
+
+            <div className="flex flex-col xl:flex-row gap-12 xl:gap-16 w-full justify-center items-center">
+              
+              {/* 곰1 Trap 보드 */}
+              <div className="flex flex-col items-center">
+                <h3 className="font-black text-lg text-slate-700 mb-4 tracking-wider flex items-center gap-2">
+                  🛡️ 곰1 Trap <span className="text-xs text-blue-500 font-bold">({Object.keys(placement).filter(k => k.startsWith('곰1')).length}/16)</span>
+                </h3>
+                
+                {/* 5x5 그리드 */}
+                <div className="grid grid-cols-5 grid-rows-5 gap-2 w-[340px] h-[340px] relative bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-inner">
+                  
+                  {/* 중앙 원 (곰1) */}
+                  <div className="col-start-2 col-end-5 row-start-2 row-end-5 flex items-center justify-center pointer-events-none p-3 z-10">
+                    <div className="w-24 h-24 rounded-full bg-slate-200/90 border-2 border-slate-300 shadow-inner flex flex-col items-center justify-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CENTER</span>
+                      <span className="text-lg font-black text-slate-700">곰1</span>
+                    </div>
+                  </div>
+
+                  {/* 격자 셀 렌더링 */}
+                  {trapGridCells.map((cell) => {
+                    const cellKey = `곰1-${cell.row}-${cell.col}`;
+                    const occupant = placement[cellKey];
+                    const isCorner = cell.type === 'corner';
+                    const isWaitingPlacement = selectedMember !== null;
+
+                    return (
+                      <div
+                        key={cellKey}
+                        style={{ gridRow: cell.row, gridColumn: cell.col }}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, '곰1', cell.row, cell.col)}
+                        onClick={() => handleCellClick('곰1', cell.row, cell.col)}
+                        className={`relative rounded-xl border flex flex-col items-center justify-center text-center p-1 transition-all ${
+                          occupant
+                            ? isCorner
+                              ? 'bg-indigo-50 border-[3.5px] border-indigo-600 shadow-lg cursor-pointer scale-105 z-20 hover:scale-110 hover:border-indigo-400 ring-4 ring-indigo-500/10'
+                              : 'bg-blue-50 border-[3px] border-blue-600 shadow-md cursor-pointer hover:scale-102 hover:border-rose-400'
+                            : isCorner
+                            ? `border-blue-300 ${isWaitingPlacement ? 'bg-blue-100 animate-pulse border-blue-500 cursor-pointer' : 'bg-blue-50 hover:bg-blue-100'}`
+                            : `border-slate-200 ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'bg-white hover:bg-slate-100'}`
+                        }`}
+                      >
+                        {occupant ? (
+                          /* 배치 완료 인원 정보 */
+                          <div className="w-full h-full flex flex-col items-center justify-center relative group/card">
+                            <span className={`text-xs font-black break-words w-full px-1 line-clamp-2 leading-tight ${
+                              isCorner ? 'text-indigo-950 font-extrabold' : 'text-blue-900'
+                            }`}>
+                              {occupant.name}
+                            </span>
+                            
+                            {/* 삭제 X 뱃지 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFromSlot(cellKey);
+                              }}
+                              className="absolute -top-1 -right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
+                              title="배치 해제"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ) : (
+                          /* 비어 있는 격자 */
+                          <div className="flex flex-col items-center justify-center pointer-events-none">
+                            {isCorner && (
+                              <span className="text-[10px] font-bold text-blue-500">
+                                코너 셀
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 곰2 Trap 보드 */}
+              <div className="flex flex-col items-center">
+                <h3 className="font-black text-lg text-slate-700 mb-4 tracking-wider flex items-center gap-2">
+                  🛡️ 곰2 Trap <span className="text-xs text-emerald-500 font-bold">({Object.keys(placement).filter(k => k.startsWith('곰2')).length}/16)</span>
+                </h3>
+                
+                {/* 5x5 그리드 */}
+                <div className="grid grid-cols-5 grid-rows-5 gap-2 w-[340px] h-[340px] relative bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-inner">
+                  
+                  {/* 중앙 원 (곰2) */}
+                  <div className="col-start-2 col-end-5 row-start-2 row-end-5 flex items-center justify-center pointer-events-none p-3 z-10">
+                    <div className="w-24 h-24 rounded-full bg-slate-200/90 border-2 border-slate-300 shadow-inner flex flex-col items-center justify-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CENTER</span>
+                      <span className="text-lg font-black text-slate-700">곰2</span>
+                    </div>
+                  </div>
+
+                  {/* 격자 셀 렌더링 */}
+                  {trapGridCells.map((cell) => {
+                    const cellKey = `곰2-${cell.row}-${cell.col}`;
+                    const occupant = placement[cellKey];
+                    const isCorner = cell.type === 'corner';
+                    const isWaitingPlacement = selectedMember !== null;
+
+                    return (
+                      <div
+                        key={cellKey}
+                        style={{ gridRow: cell.row, gridColumn: cell.col }}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, '곰2', cell.row, cell.col)}
+                        onClick={() => handleCellClick('곰2', cell.row, cell.col)}
+                        className={`relative rounded-xl border flex flex-col items-center justify-center text-center p-1 transition-all ${
+                          occupant
+                            ? isCorner
+                              ? 'bg-indigo-50 border-[3.5px] border-indigo-600 shadow-lg cursor-pointer scale-105 z-20 hover:scale-110 hover:border-indigo-400 ring-4 ring-indigo-500/10'
+                              : 'bg-blue-50 border-[3px] border-blue-600 shadow-md cursor-pointer hover:scale-102 hover:border-rose-400'
+                            : isCorner
+                            ? `border-blue-300 ${isWaitingPlacement ? 'bg-blue-100 animate-pulse border-blue-500 cursor-pointer' : 'bg-blue-50 hover:bg-blue-100'}`
+                            : `border-slate-200 ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'bg-white hover:bg-slate-100'}`
+                        }`}
+                      >
+                        {occupant ? (
+                          /* 배치 완료 인원 정보 */
+                          <div className="w-full h-full flex flex-col items-center justify-center relative group/card">
+                            <span className={`text-xs font-black break-words w-full px-1 line-clamp-2 leading-tight ${
+                              isCorner ? 'text-indigo-950 font-extrabold' : 'text-blue-900'
+                            }`}>
+                              {occupant.name}
+                            </span>
+                            
+                            {/* 삭제 X 뱃지 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFromSlot(cellKey);
+                              }}
+                              className="absolute -top-1 -right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
+                              title="배치 해제"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ) : (
+                          /* 비어 있는 격자 */
+                          <div className="flex flex-col items-center justify-center pointer-events-none">
+                            {isCorner && (
+                              <span className="text-[10px] font-bold text-blue-500">
+                                코너 셀
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
