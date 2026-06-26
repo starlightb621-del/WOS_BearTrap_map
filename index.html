@@ -12,7 +12,7 @@ import {
   Info
 } from 'lucide-react';
 
-// image_9fe0f6.png의 실제 전체 명단 완벽 반영
+// image_9fe0f6.png에 기재된 실제 38명의 연맹원 리스트 완벽 탑재
 const defaultMembers = [
   // 곰1 연맹원 (19명)
   { id: 'm1', name: '9pro', team: '곰1', initialTeam: '곰1' },
@@ -57,28 +57,24 @@ const defaultMembers = [
   { id: 'm38', name: 'bUbbleS', team: '곰2', initialTeam: '곰2' }
 ];
 
-// 5x5 그리드에서 외곽 테두리 형태만 가지도록 16개의 셀 위치 지정
+// 5x5 형태의 외곽 테두리 16개 격자 맵핑 (양 끝 4개는 코너 셀로 지정)
 const trapGridCells = [
-  // Row 1 (Top)
+  // 1열 (상단 행) - 양 끝은 코너셀
   { row: 1, col: 1, type: 'corner', label: '코너 셀' },
   { row: 1, col: 2, type: 'normal', label: '' },
   { row: 1, col: 3, type: 'normal', label: '' },
   { row: 1, col: 4, type: 'normal', label: '' },
   { row: 1, col: 5, type: 'corner', label: '코너 셀' },
   
-  // Row 2 (Middle Top)
+  // 중간 행들
   { row: 2, col: 1, type: 'normal', label: '' },
   { row: 2, col: 5, type: 'normal', label: '' },
-  
-  // Row 3 (Center Height)
   { row: 3, col: 1, type: 'normal', label: '' },
   { row: 3, col: 5, type: 'normal', label: '' },
-  
-  // Row 4 (Middle Bottom)
   { row: 4, col: 1, type: 'normal', label: '' },
   { row: 4, col: 5, type: 'normal', label: '' },
   
-  // Row 5 (Bottom)
+  // 5열 (하단 행) - 양 끝은 코너셀
   { row: 5, col: 1, type: 'corner', label: '코너 셀' },
   { row: 5, col: 2, type: 'normal', label: '' },
   { row: 5, col: 3, type: 'normal', label: '' },
@@ -88,13 +84,12 @@ const trapGridCells = [
 
 export default function App() {
   const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('trap_members_v2');
+    const saved = localStorage.getItem('trap_members_v3');
     return saved ? JSON.parse(saved) : defaultMembers;
   });
 
-  // 배치 기록 상태: { '곰1-row-col': memberObject }
   const [placement, setPlacement] = useState(() => {
-    const saved = localStorage.getItem('trap_placement_v2');
+    const saved = localStorage.getItem('trap_placement_v3');
     return saved ? JSON.parse(saved) : {};
   });
 
@@ -103,38 +98,39 @@ export default function App() {
   const [editName, setEditName] = useState('');
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberTeam, setNewMemberTeam] = useState('곰1');
-  const [activeFilter, setActiveFilter] = useState('전체'); // '전체', '곰1', '곰2', '미배치'
-  
+  const [activeFilter, setActiveFilter] = useState('전체');
   const [selectedMember, setSelectedMember] = useState(null);
-  const [html2canvasLoaded, setHtml2canvasLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaved, setIsAutoSaved] = useState(false);
+  const [screenshotReady, setScreenshotReady] = useState(false);
 
   const boardRef = useRef(null);
 
+  // esbuild 컴파일 에러를 극팩하기 위해 런타임에 외부 CDN 스크립트 주입
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    script.async = true;
-    script.onload = () => setHtml2canvasLoaded(true);
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    const existingScript = document.getElementById('html2canvas-cdn-script');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = 'html2canvas-cdn-script';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      script.async = true;
+      script.onload = () => setScreenshotReady(true);
+      document.body.appendChild(script);
+    } else {
+      setScreenshotReady(true);
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('trap_members_v2', JSON.stringify(members));
-    localStorage.setItem('trap_placement_v2', JSON.stringify(placement));
+    localStorage.setItem('trap_members_v3', JSON.stringify(members));
+    localStorage.setItem('trap_placement_v3', JSON.stringify(placement));
     setIsAutoSaved(true);
-    const timer = setTimeout(() => setIsAutoSaved(false), 2000);
+    const timer = setTimeout(() => setIsAutoSaved(false), 1500);
     return () => clearTimeout(timer);
   }, [members, placement]);
 
-  // 이미 배치된 연맹원 목록 구하기
   const placedMemberIds = Object.values(placement).map(m => m.id);
 
-  // 사이드바에서 현재 드래그용 명단 구하기
   const filteredMembers = members.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
@@ -153,12 +149,9 @@ export default function App() {
 
   const handleSaveEdit = (id) => {
     if (!editName.trim()) return;
-    
-    // 명단 리스트 업데이트
     const updated = members.map(m => m.id === id ? { ...m, name: editName } : m);
     setMembers(updated);
 
-    // 이미 배치판에 놓인 경우 해당 카드의 이름도 업데이트
     const updatedPlacement = { ...placement };
     Object.keys(updatedPlacement).forEach(key => {
       if (updatedPlacement[key].id === id) {
@@ -183,10 +176,8 @@ export default function App() {
   };
 
   const handleDeleteMember = (id) => {
-    if (window.confirm('이 연맹원을 명단에서 완전히 삭제하시겠습니까? (배치판에서도 제거됩니다)')) {
+    if (window.confirm('이 연맹원을 명단에서 삭제하시겠습니까?')) {
       setMembers(members.filter(m => m.id !== id));
-      
-      // 배치된 곳에서도 삭제
       const updatedPlacement = { ...placement };
       Object.keys(updatedPlacement).forEach(key => {
         if (updatedPlacement[key].id === id) {
@@ -215,13 +206,9 @@ export default function App() {
       
       const { member, sourceKey } = JSON.parse(dataStr);
       const targetKey = `${targetTrap}-${targetRow}-${targetCol}`;
-
-      // 1. 기존 타겟 위치에 있는 인원 정보 보관
       const previousOccupant = placement[targetKey];
-
       const nextPlacement = { ...placement };
 
-      // 2. 원래 소스 구역이 배치판 내였다면 기존 위치를 비우거나 스왑
       if (sourceKey) {
         if (previousOccupant) {
           nextPlacement[sourceKey] = previousOccupant;
@@ -230,10 +217,8 @@ export default function App() {
         }
       }
 
-      // 3. 타겟 구역에 신규 인원 안착
       nextPlacement[targetKey] = member;
 
-      // 4. 배치 상황에 맞춰 연맹 소속 함정 정보 임시 전환
       const updatedMembers = members.map(m => {
         if (m.id === member.id) {
           return { ...m, team: targetTrap }; 
@@ -305,7 +290,7 @@ export default function App() {
   };
 
   const handleResetPlacement = () => {
-    if (window.confirm('모든 연맹원 배치를 초기화하시겠습니까?')) {
+    if (window.confirm('모든 배치를 초기화하시겠습니까?')) {
       setPlacement({});
       setMembers(members.map(m => ({ ...m, team: m.initialTeam })));
       setSelectedMember(null);
@@ -313,21 +298,22 @@ export default function App() {
   };
 
   const handleExportImage = async () => {
-    if (!html2canvasLoaded) return;
-    
+    if (!screenshotReady || !window.html2canvas) {
+      alert("배치도 이미지 저장 라이브러리가 로드되는 중입니다. 잠시 후 다시 시도해 주세요!");
+      return;
+    }
     setIsSaving(true);
     try {
       const canvas = await window.html2canvas(boardRef.current, {
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false
       });
-      
       const image = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = image;
-      link.download = `곰함정_연맹원_배치도_${new Date().toISOString().slice(0, 10)}.png`;
+      link.download = `곰함정_가로배치도_${new Date().toISOString().slice(0, 10)}.png`;
       link.click();
     } catch (err) {
       console.error(err);
@@ -339,22 +325,22 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none antialiased text-slate-800">
       
-      {/* 헤더 */}
-      <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-md sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+      {/* 상단 통합 헤더 */}
+      <header className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-md sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-600 rounded-lg text-white shadow-inner animate-pulse">
             <LayoutGrid size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-wide">곰함정 연맹원 배치기</h1>
-            <p className="text-xs text-blue-200">Drag & Drop 또는 간편 터치 방식으로 연맹원을 배치해 보세요.</p>
+            <h1 className="text-xl font-bold tracking-wide">곰함정 전술 배치기 (Vercel 최적화)</h1>
+            <p className="text-xs text-blue-200">드래그 앤 드롭 및 스마트 터치 기반의 연맹 전술 배치 시스템</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-950/50 border border-blue-800 rounded-full text-xs text-blue-200">
             <span className={`w-2 h-2 rounded-full ${isAutoSaved ? 'bg-emerald-400' : 'bg-blue-400'}`}></span>
-            {isAutoSaved ? '실시간 자동 저장 중...' : '배치 실시간 저장됨'}
+            {isAutoSaved ? '배치 실시간 저장 중' : '실시간 동기화 완료'}
           </div>
 
           <button 
@@ -375,37 +361,37 @@ export default function App() {
             }`}
           >
             <Download size={15} />
-            {isSaving ? '이미지 생성 중...' : '배치도 이미지 저장'}
+            {isSaving ? '배치도 생성 중...' : '배치도 이미지 저장'}
           </button>
         </div>
       </header>
 
-      {/* 메인 레이아웃 */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] w-full mx-auto">
+      {/* 메인 레이아웃 구조 */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-[1700px] w-full mx-auto">
         
-        {/* ==================== 왼쪽: 연맹원 명단 사이드바 ==================== */}
+        {/* ==================== 왼쪽 사이드바 (명단 및 조작) ==================== */}
         <aside className="w-full lg:w-80 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col gap-4">
-          
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-md font-bold text-slate-800 flex items-center gap-2">
-                <LayoutGrid size={18} className="text-blue-600" />
+              <h2 className="text-md font-bold text-blue-900 flex items-center gap-2">
+                <LayoutGrid size={18} />
                 연맹원 명단 <span className="text-xs font-normal text-slate-400">({members.length}명)</span>
               </h2>
             </div>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-2.5 flex items-start gap-2 text-xs text-blue-700 leading-relaxed mb-3">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-start gap-2 text-xs text-blue-700 leading-relaxed mb-3">
               <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
               <div>
-                <strong className="block font-semibold mb-0.5">💡 배치 및 편집 팁</strong>
-                명단을 드래그하여 배치판에 놓거나, 클릭(터치) 후 빈칸을 터치하면 배치됩니다! 이름 우측 수정 아이콘으로 편집 가능합니다.
+                <strong>💡 모바일/PC 스마트 배치 방식</strong><br/>
+                - PC: 이름을 드래그하여 배치판 빈칸에 놓으세요.<br/>
+                - 모바일: 이름을 터치한 후 원하는 칸을 터치하세요!
               </div>
             </div>
 
             <form onSubmit={handleAddMember} className="flex gap-1">
               <input 
                 type="text"
-                placeholder="이름 입력 후 추가..."
+                placeholder="연맹원 추가..."
                 value={newMemberName}
                 onChange={(e) => setNewMemberName(e.target.value)}
                 className="flex-1 text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 bg-slate-50 text-slate-800"
@@ -413,7 +399,7 @@ export default function App() {
               <select
                 value={newMemberTeam}
                 onChange={(e) => setNewMemberTeam(e.target.value)}
-                className="text-xs px-1.5 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-500 text-slate-700"
+                className="text-xs px-1 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:border-blue-500 text-slate-700"
               >
                 <option value="곰1">곰1</option>
                 <option value="곰2">곰2</option>
@@ -429,16 +415,16 @@ export default function App() {
 
           <hr className="border-slate-100" />
 
-          {/* 검색 및 필터 */}
+          {/* 검색 및 필터링 */}
           <div className="space-y-2">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-3 text-slate-400" />
               <input 
                 type="text"
-                placeholder="연맹원 이름 검색..."
+                placeholder="검색할 이름 입력..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs pl-8 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 bg-slate-50 text-slate-800"
+                className="w-full text-xs pl-8 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 bg-slate-50"
               />
             </div>
             
@@ -459,148 +445,137 @@ export default function App() {
             </div>
           </div>
 
-          {/* 스크롤 명단 리스트 */}
-          <div className="flex-1 overflow-y-auto max-h-[500px] lg:max-h-[calc(100vh-320px)] space-y-1.5 pr-1">
-            {filteredMembers.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
-                조건에 맞는 연맹원이 없습니다.
-              </div>
-            ) : (
-              filteredMembers.map((member) => {
-                const isPlaced = placedMemberIds.includes(member.id);
-                const isSelected = selectedMember?.id === member.id;
-                
-                return (
-                  <div 
-                    key={member.id}
-                    draggable={!isPlaced}
-                    onDragStart={(e) => handleDragStart(e, member)}
-                    className={`group relative flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                      isPlaced 
-                        ? 'bg-slate-50 border-slate-200 opacity-40 cursor-not-allowed select-none' 
-                        : isSelected
-                        ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-400/20 cursor-pointer shadow-md'
-                        : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-grab active:cursor-grabbing'
-                    }`}
-                    onClick={() => !isPlaced && handleSelectMember(member)}
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden w-full">
-                      <div className={`w-1.5 h-8 rounded-full shrink-0 ${
-                        member.team === '곰1' ? 'bg-sky-400' : 'bg-emerald-400'
-                      }`} />
-                      
-                      {editingId === member.id ? (
-                        <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
-                          <input 
-                            className="w-full text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 text-slate-800"
-                            value={editName} 
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(member.id)}
-                            autoFocus
-                          />
-                          <button 
-                            onClick={() => handleSaveEdit(member.id)} 
-                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button 
-                            onClick={() => setEditingId(null)} 
-                            className="p-1 text-rose-500 hover:bg-rose-50 rounded"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between w-full overflow-hidden">
-                          <span className="text-xs font-bold text-slate-700 truncate">{member.name}</span>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ml-1 ${
-                            member.team === '곰1' 
-                              ? 'bg-sky-50 text-sky-600 border border-sky-100' 
-                              : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                          }`}>
-                            {member.team}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {!isPlaced && editingId !== member.id && (
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white pl-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleStartEdit(member); }}
-                          className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"
-                        >
-                          <Edit2 size={12} />
+          {/* 스크롤 연맹원 리스트 */}
+          <div className="flex-1 overflow-y-auto max-h-[450px] lg:max-h-[calc(100vh-320px)] space-y-1.5 pr-1">
+            {filteredMembers.map((member) => {
+              const isPlaced = placedMemberIds.includes(member.id);
+              const isSelected = selectedMember?.id === member.id;
+              
+              return (
+                <div 
+                  key={member.id}
+                  draggable={!isPlaced}
+                  onDragStart={(e) => handleDragStart(e, member)}
+                  className={`group relative flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                    isPlaced 
+                      ? 'bg-slate-50 border-slate-100 opacity-40 cursor-not-allowed select-none' 
+                      : isSelected
+                      ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-400/20 cursor-pointer shadow-md'
+                      : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-grab active:cursor-grabbing'
+                  }`}
+                  onClick={() => !isPlaced && handleSelectMember(member)}
+                >
+                  <div className="flex items-center gap-2 overflow-hidden w-full">
+                    <div className={`w-1.5 h-8 rounded-full shrink-0 ${
+                      member.team === '곰1' ? 'bg-sky-400' : 'bg-emerald-400'
+                    }`} />
+                    
+                    {editingId === member.id ? (
+                      <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          className="w-full text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none"
+                          value={editName} 
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(member.id)}
+                          autoFocus
+                        />
+                        <button onClick={() => handleSaveEdit(member.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                          <Check size={14} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeleteMember(member.id); }}
-                          className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-slate-100"
-                        >
-                          <Trash2 size={12} />
+                        <button onClick={() => setEditingId(null)} className="p-1 text-rose-500 hover:bg-rose-50 rounded">
+                          <X size={14} />
                         </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between w-full overflow-hidden">
+                        <span className="text-xs font-bold text-slate-700 truncate">{member.name}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          member.team === '곰1' 
+                            ? 'bg-sky-50 text-sky-600 border border-sky-100' 
+                            : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        }`}>
+                          {member.team}
+                        </span>
                       </div>
                     )}
                   </div>
-                );
-              })
-            )}
+
+                  {!isPlaced && editingId !== member.id && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-white pl-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleStartEdit(member); }}
+                        className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteMember(member.id); }}
+                        className="p-1 text-slate-400 hover:text-rose-500 rounded"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          
+
           {selectedMember && (
-            <div className="bg-blue-600 text-white rounded-xl p-3 shadow-md animate-bounce flex items-center justify-between text-xs font-semibold">
+            <div className="bg-indigo-600 text-white rounded-xl p-3 shadow-md animate-bounce flex items-center justify-between text-xs font-semibold">
               <span className="truncate">🎯 {selectedMember.name} 선택됨! 배치할 칸을 터치하세요.</span>
-              <button onClick={() => setSelectedMember(null)} className="hover:bg-blue-700 p-0.5 rounded">
+              <button onClick={() => setSelectedMember(null)} className="hover:bg-indigo-700 p-0.5 rounded">
                 <X size={14} />
               </button>
             </div>
           )}
         </aside>
 
-        {/* ==================== 오른쪽: 메인 배치 보드 구역 ==================== */}
-        <main className="flex-1 flex flex-col gap-4">
+        {/* ==================== 오른쪽: 메인 배치 보드 구역 (가로 가로 가로 배치) ==================== */}
+        <main className="flex-1 flex flex-col gap-4 overflow-hidden">
           
-          <div className="bg-slate-100 border border-slate-200/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-slate-100 border border-slate-200/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="text-xs text-slate-600 flex flex-col gap-1">
-              <span className="font-bold text-slate-700 text-sm">📢 배치 현황판 요약</span>
-              <span>• 전체 인원 중 <strong className="text-blue-600">{placedMemberIds.length}명</strong>이 배치 완료되었습니다.</span>
-              <span>• 코너 요충지에 자리한 연맹원은 더 크게 로열 인디고 색상으로 강조 표시됩니다.</span>
+              <span className="font-bold text-slate-700 text-sm">📢 전술 배치 정보</span>
+              <span>• 요충지인 **코너 셀**은 일반 드롭 존보다 **1.5배 크게 확대**되어 전면에 부각됩니다.</span>
+              <span>• 코너 요충지 점령 완료 시 **인디고 보라색**, 일반 드롭 존 완료 시 **시안 파란색**으로 색상이 구분됩니다.</span>
             </div>
             
-            <div className="flex gap-3 text-xs shrink-0 bg-white p-3 rounded-xl border border-slate-200">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 bg-indigo-50 border-[2.5px] border-indigo-600 rounded scale-105"></div>
-                <span className="font-semibold text-slate-600">배치된 코너 셀</span>
+            <div className="flex gap-2 text-xs shrink-0 bg-white p-3 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 bg-indigo-500 border-2 border-indigo-700 rounded scale-110"></div>
+                <span className="font-semibold text-slate-600">코너 요충지 (인디고)</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3.5 h-3.5 bg-blue-50 border-[2px] border-blue-600 rounded"></div>
-                <span className="font-semibold text-slate-600">배치된 드롭 존</span>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 bg-blue-400 border-2 border-blue-600 rounded"></div>
+                <span className="font-semibold text-slate-600">일반 드롭 존 (블루)</span>
               </div>
             </div>
           </div>
 
-          {/* 배치 도표 */}
+          {/* 배치 도표 컨테이너 - 가로 나란히 배치 최적화 */}
           <div 
             ref={boardRef} 
-            className="bg-white p-8 rounded-3xl border border-slate-200/80 shadow-md flex flex-col items-center justify-center gap-10 overflow-x-auto min-h-[580px]"
+            className="bg-white p-8 rounded-3xl border border-slate-200 shadow-md flex flex-col items-center justify-center gap-10 overflow-x-auto min-h-[640px]"
           >
             <div className="text-center w-full">
-              <h2 className="text-2xl font-black text-slate-800 tracking-wide">🏆 곰함정 연맹원 전술 자리 배치도</h2>
-              <p className="text-xs text-slate-400 mt-1">최종 갱신일: {new Date().toLocaleDateString()}</p>
+              <h2 className="text-2xl font-black text-slate-800 tracking-wide uppercase">🏆 곰함정 1 & 2 연맹 통합 배치 전략도</h2>
+              <p className="text-xs text-slate-400 mt-1">자동 동기화 상태: 상시 저장 켜짐</p>
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-12 xl:gap-16 w-full justify-center items-center">
+            {/* xl:flex-row 로 설정하여 데스크톱에서 완벽히 가로 정렬 */}
+            <div className="flex flex-col xl:flex-row gap-16 xl:gap-24 w-full justify-center items-center py-6">
               
-              {/* 곰1 Trap 보드 */}
+              {/* ---------------- 곰1 Trap (가로형) ---------------- */}
               <div className="flex flex-col items-center">
-                <h3 className="font-black text-lg text-slate-700 mb-4 tracking-wider flex items-center gap-2">
-                  🛡️ 곰1 Trap <span className="text-xs text-blue-500 font-bold">({Object.keys(placement).filter(k => k.startsWith('곰1')).length}/16)</span>
+                <h3 className="font-black text-lg text-slate-700 mb-6 tracking-wider flex items-center gap-2">
+                  🛡️ 곰1 Trap 전술판 <span className="text-xs text-blue-500 font-bold">({Object.keys(placement).filter(k => k.startsWith('곰1')).length}/16)</span>
                 </h3>
                 
                 {/* 5x5 그리드 */}
-                <div className="grid grid-cols-5 grid-rows-5 gap-2 w-[340px] h-[340px] relative bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-inner">
+                <div className="grid grid-cols-5 grid-rows-5 gap-3 w-[360px] h-[360px] relative bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
                   
-                  {/* 중앙 원 (곰1) */}
+                  {/* 중앙 로고 센터피스 */}
                   <div className="col-start-2 col-end-5 row-start-2 row-end-5 flex items-center justify-center pointer-events-none p-3 z-10">
                     <div className="w-24 h-24 rounded-full bg-slate-200/90 border-2 border-slate-300 shadow-inner flex flex-col items-center justify-center">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CENTER</span>
@@ -623,41 +598,39 @@ export default function App() {
                         onDrop={(e) => handleDrop(e, '곰1', cell.row, cell.col)}
                         onClick={() => handleCellClick('곰1', cell.row, cell.col)}
                         className={`relative rounded-xl border flex flex-col items-center justify-center text-center p-1 transition-all ${
+                          isCorner 
+                            ? 'scale-[1.4] z-20 shadow-md ring-1 ring-slate-200' 
+                            : 'z-10'
+                        } ${
                           occupant
                             ? isCorner
-                              ? 'bg-indigo-50 border-[3.5px] border-indigo-600 shadow-lg cursor-pointer scale-105 z-20 hover:scale-110 hover:border-indigo-400 ring-4 ring-indigo-500/10'
-                              : 'bg-blue-50 border-[3px] border-blue-600 shadow-md cursor-pointer hover:scale-102 hover:border-rose-400'
+                              ? 'bg-indigo-600 border-[3px] border-indigo-900 text-white shadow-xl cursor-pointer ring-4 ring-indigo-500/20'
+                              : 'bg-blue-500 border-[2.5px] border-blue-700 text-white shadow-md cursor-pointer hover:border-rose-400'
                             : isCorner
-                            ? `border-blue-300 ${isWaitingPlacement ? 'bg-blue-100 animate-pulse border-blue-500 cursor-pointer' : 'bg-blue-50 hover:bg-blue-100'}`
-                            : `border-slate-200 ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'bg-white hover:bg-slate-100'}`
+                            ? `border-indigo-400 bg-indigo-50/50 ${isWaitingPlacement ? 'bg-indigo-100 animate-pulse cursor-pointer' : 'hover:bg-indigo-100'}`
+                            : `border-slate-200 bg-white ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'hover:bg-slate-100'}`
                         }`}
                       >
                         {occupant ? (
-                          /* 배치 완료 인원 정보 */
                           <div className="w-full h-full flex flex-col items-center justify-center relative group/card">
-                            <span className={`text-xs font-black break-words w-full px-1 line-clamp-2 leading-tight ${
-                              isCorner ? 'text-indigo-950 font-extrabold' : 'text-blue-900'
-                            }`}>
+                            <span className="text-[10px] font-black break-all px-0.5 line-clamp-2 leading-none">
                               {occupant.name}
                             </span>
-                            
-                            {/* 삭제 X 뱃지 */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemoveFromSlot(cellKey);
                               }}
-                              className="absolute -top-1 -right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
+                              className="absolute -top-1 -right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
                               title="배치 해제"
                             >
-                              <X size={10} />
+                              <X size={8} />
                             </button>
                           </div>
                         ) : (
-                          /* 비어 있는 격자 */
                           <div className="flex flex-col items-center justify-center pointer-events-none">
                             {isCorner && (
-                              <span className="text-[10px] font-bold text-blue-500">
+                              <span className="text-[8px] font-black text-indigo-700 uppercase tracking-tighter">
                                 코너 셀
                               </span>
                             )}
@@ -669,16 +642,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 곰2 Trap 보드 */}
+              {/* ---------------- 곰2 Trap (가로형) ---------------- */}
               <div className="flex flex-col items-center">
-                <h3 className="font-black text-lg text-slate-700 mb-4 tracking-wider flex items-center gap-2">
+                <h3 className="font-black text-lg text-slate-700 mb-6 tracking-wider flex items-center gap-2">
                   🛡️ 곰2 Trap <span className="text-xs text-emerald-500 font-bold">({Object.keys(placement).filter(k => k.startsWith('곰2')).length}/16)</span>
                 </h3>
                 
                 {/* 5x5 그리드 */}
-                <div className="grid grid-cols-5 grid-rows-5 gap-2 w-[340px] h-[340px] relative bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-inner">
+                <div className="grid grid-cols-5 grid-rows-5 gap-3 w-[360px] h-[360px] relative bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
                   
-                  {/* 중앙 원 (곰2) */}
+                  {/* 중앙 로고 센터피스 */}
                   <div className="col-start-2 col-end-5 row-start-2 row-end-5 flex items-center justify-center pointer-events-none p-3 z-10">
                     <div className="w-24 h-24 rounded-full bg-slate-200/90 border-2 border-slate-300 shadow-inner flex flex-col items-center justify-center">
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">CENTER</span>
@@ -701,41 +674,39 @@ export default function App() {
                         onDrop={(e) => handleDrop(e, '곰2', cell.row, cell.col)}
                         onClick={() => handleCellClick('곰2', cell.row, cell.col)}
                         className={`relative rounded-xl border flex flex-col items-center justify-center text-center p-1 transition-all ${
+                          isCorner 
+                            ? 'scale-[1.4] z-20 shadow-md ring-1 ring-slate-200' 
+                            : 'z-10'
+                        } ${
                           occupant
                             ? isCorner
-                              ? 'bg-indigo-50 border-[3.5px] border-indigo-600 shadow-lg cursor-pointer scale-105 z-20 hover:scale-110 hover:border-indigo-400 ring-4 ring-indigo-500/10'
-                              : 'bg-blue-50 border-[3px] border-blue-600 shadow-md cursor-pointer hover:scale-102 hover:border-rose-400'
+                              ? 'bg-indigo-600 border-[3px] border-indigo-900 text-white shadow-xl cursor-pointer ring-4 ring-indigo-500/20'
+                              : 'bg-blue-500 border-[2.5px] border-blue-700 text-white shadow-md cursor-pointer hover:border-rose-400'
                             : isCorner
-                            ? `border-blue-300 ${isWaitingPlacement ? 'bg-blue-100 animate-pulse border-blue-500 cursor-pointer' : 'bg-blue-50 hover:bg-blue-100'}`
-                            : `border-slate-200 ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'bg-white hover:bg-slate-100'}`
+                            ? `border-indigo-400 bg-indigo-50/50 ${isWaitingPlacement ? 'bg-indigo-100 animate-pulse cursor-pointer' : 'hover:bg-indigo-100'}`
+                            : `border-slate-200 bg-white ${isWaitingPlacement ? 'bg-emerald-50 animate-pulse border-emerald-400 cursor-pointer' : 'hover:bg-slate-100'}`
                         }`}
                       >
                         {occupant ? (
-                          /* 배치 완료 인원 정보 */
                           <div className="w-full h-full flex flex-col items-center justify-center relative group/card">
-                            <span className={`text-xs font-black break-words w-full px-1 line-clamp-2 leading-tight ${
-                              isCorner ? 'text-indigo-950 font-extrabold' : 'text-blue-900'
-                            }`}>
+                            <span className="text-[10px] font-black break-all px-0.5 line-clamp-2 leading-none">
                               {occupant.name}
                             </span>
-                            
-                            {/* 삭제 X 뱃지 */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemoveFromSlot(cellKey);
                               }}
-                              className="absolute -top-1 -right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
+                              className="absolute -top-1 -right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover/card:opacity-100 transition-opacity z-30"
                               title="배치 해제"
                             >
-                              <X size={10} />
+                              <X size={8} />
                             </button>
                           </div>
                         ) : (
-                          /* 비어 있는 격자 */
                           <div className="flex flex-col items-center justify-center pointer-events-none">
                             {isCorner && (
-                              <span className="text-[10px] font-bold text-blue-500">
+                              <span className="text-[8px] font-black text-indigo-700 uppercase tracking-tighter">
                                 코너 셀
                               </span>
                             )}
